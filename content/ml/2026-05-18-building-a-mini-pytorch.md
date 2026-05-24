@@ -8,7 +8,7 @@ date: 2026-05-18T19:33:00.000-04:00
 thumbnail: /images/uploads/neural-network.png
 ---
 ## Objective
-Whenever I am trying to learn a new skill as an engineer, incorporating it into an active project always helps to deepen that understanding. So with machine-learning, a model training framework like [Pytorch](https://pytorch.org/projects/pytorch/) or [Tensorflow](https://www.tensorflow.org/) seemed perfect. These frameworks build on core machine-learning fundamentals, and constantly evolve to encompass modern architectures like [Transformers](https://arxiv.org/html/1706.03762v7) as they are developed. My goal is to use this project to build common foundational architectures as I learn them.
+I recently wrote about a [career pivot](https://phito.dev/blog/2026-03-24-my-journey-so-far) to machine-learning. Whenever I am trying to teach myself a new skill as an engineer, incorporating it into an active project always helps to deepen that understanding. So with machine-learning, a model training framework like [Pytorch](https://pytorch.org/projects/pytorch/) or [Tensorflow](https://www.tensorflow.org/) seemed perfect. These frameworks build on core machine-learning fundamentals, and constantly evolve to encompass modern architectures like [Transformers](https://arxiv.org/html/1706.03762v7) as they are developed. My goal is to use this project to build common foundational architectures as I learn them.
 
 ## Scope 
 There are of course some tradeoffs I am making to keep this realistic as one of many projects on my plate. The most prominent being the use of [Numpy](https://numpy.org/) for vectorized math that is the backbone of machine-learning. 
@@ -344,5 +344,51 @@ def train(self, X, y, X_test, y_test):
     return losses
 ```
 ### Putting it all together!
+Now that we've implemented the core functionality, let's look at what using the framework looks like. Here is a full example of what training the classic MNIST handwritten digits dataset looks like:
+```python
+import numpy as np
+from datasets import load_dataset
 
+from phitodeep.model import SequentialBuilder
+from phitodeep.loss import CategoricalCrossEntropy
+from phitodeep.optimization.optimizers import Adam
+from phitodeep.optimization.initialization import Xavier, InitType
+
+train_dataset = load_dataset("ylecun/mnist", split="train")
+test_dataset = load_dataset("ylecun/mnist", split="test")
+
+X_train = train_dataset["image"]
+y_train = train_dataset["label"]
+X_test = test_dataset["image"]
+y_test = test_dataset["label"]
+
+X_train = np.array(X_train).astype(np.float32) / 255.0
+y_train = np.array(y_train)
+X_test = np.array(X_test).astype(np.float32) / 255.0
+y_test = np.array(y_test)
+print(X_train.shape, y_train.shape)
+
+model = (
+    SequentialBuilder()
+    .flatten()
+    .dense(784, 128)
+    .relu()
+    .dense(128, 64, Xavier(InitType.NORMAL))
+    .relu()
+    .dense(64, 10, Xavier(InitType.NORMAL))
+    .softmax()
+    .optimizer(Adam())
+    .loss(CategoricalCrossEntropy())
+    .alpha(0.05)
+    .epochs(5)
+    .batch(64)
+    .build()
+)
+
+model.summary()
+
+model.train(X_train, y_train, X_test, y_test)
+```
+Very reminiscent of all the major frameworks.
 ## Conclusion 
+That covers the core of building a deep learning framework. The full source code is currently hosted on [GitHub](https://github.com/PhitoDev/phito-deep). There is also [documentation](https://phito-deep.readthedocs.io/en/latest/index.html) for the project. And you can also find the package on [PyPi](https://pypi.org/project/phitodeep/) for experimenting with your own projects. As stated earlier, I plan to regularly update this project and iterate on it as I deepen my knowledge. Also look forward to more content on example use cases.
