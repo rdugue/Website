@@ -19,15 +19,16 @@ Suffice to say, this library's intended use is for educational purposes. For now
 
 ## Architecture 
 I organized the components as modules in an intuitive and hopefully extensible way:
-* **Layers:** These are the core building blocks of the model. A layer can be for flattening data, an activation function, normalization, embedding, encoding, or simply a feed forward(Dense, Linear) layer. All variations will implement the necessary base class methods for forward and back propagation.
+* **Layers:** These are the core building blocks of the model. A layer can be for flattening data, an activation function, normalization, embedding, encoding, or simply a fully-connected (Dense, Linear) layer. All variations will implement the necessary base class methods for forward and back propagation.
 * **Loss:** This module holds all the different algorithms for calculating loss. It will also have a base class for flexibility.
 * **Optimization:** This module holds everything related to improve model accuracy. This means SGD and Adam implementations, weight initialization algorithms, along with the training loop.
 * **Model:** This is where we put it all together! This takes our layers, our loss metric, and our optimization settings to create our trainable model. 
 
 ## Code
-So we've done our planning like good little engineers, so let's take a look at the code!
+So we've done our planning like good little engineers, so let's take a look at the code! We're going to take a look at snippets from the core modules that should be enough for a basic understanding of how the framework does it's magic. For the full source code, skip to the conclusion.
+
 ### Layers 
-Here is the base layer class:
+We'll start by taking a look at the base layer class:
 ```python
 import numpy as np
 
@@ -54,7 +55,9 @@ class Layer:
     def copy(self):
         raise NotImplementedError(f"Block '{self.name}' must implement copy method")
 ```
-And here is the dense layer implementation:
+It's pretty straight forward. Initializers can be specified for each layer, allowing for weight and bias initialization depending on the kind of regression we're doing(no Initializer snippet, but it's a pretty small module and easy to find in the codebase). Each layer is also responsible for managing a cache and gradients, to enable different optimizers to update weights and biases after backpropagation. Forward stores the input features in the cache before the linear regression and feed forward with the current weights and biases. Backward takes those features from the cache to calculate the gradients with respect to weights and biases.
+
+And here is that implemented in the dense layer implementation:
 ```python
 class Dense(Layer):
     """
@@ -107,6 +110,8 @@ class Dense(Layer):
         new_layer.cache = {k: v.copy() for k, v in self.cache.items()}
         return new_layer
 ```
+Notice the backward method implementation passes the gradients with respect to inputs up the layer chain at end.
+
 Finally let's look at the Softmax implementation:
 ```python
 import numpy as np
@@ -137,8 +142,10 @@ class Softmax(Layer):
         new_layer.cache = self.cache.copy()
         return new_layer
 ```
+The main takeaway here is I am assuming Softmax activation will be used with Categorical Cross Entropy loss, so gradient of the loss is a straight pass to the gradient with respect to inputs.
+
 ### Loss
-The base loss class:
+Next up we have the base loss class:
 ```python
 import numpy as np
 
@@ -155,6 +162,8 @@ class LossBase:
             f"{self.name} must implement the loss_gradient method."
         )
 ```
+Each loss class implements a method to calculate the loss and another to calculate the gradient with respect to the loss.
+
 And here is the implementation for CCE:
 ```python
 class CategoricalCrossEntropy(LossBase):
@@ -173,6 +182,7 @@ class CategoricalCrossEntropy(LossBase):
         grad[np.arange(N), y_true] -= 1.0
         return grad / N
 ```
+
 ### Optimization
 For optimization we'll look at the optimizer base class and the Adam implementation:
 ```python
@@ -218,7 +228,9 @@ class Adam(Optimizer):
                     param = getattr(layer, param_name)
                     param -= self.alpha * m_hat / (np.sqrt(v_hat) + self.epsilon)
 ```
-Now let's look at the training loop:
+Each Optimizer implements a step method. In the case Adam, we use the gradients stored by each layer to calculate their respective first and second momentum. Those are in turn used to update their weights and biases.
+
+And now let's look at the training loop:
 ```python
 import numpy as np
 from .optimizers import Optimizer
@@ -274,6 +286,8 @@ def train_loop(
 
     return losses
 ```
+Currently batch size controls the training mode. 
+
 ### Model 
 Finally let's examine some code from our model class `Sequential`!
 First our init block for reference:
@@ -343,6 +357,7 @@ def train(self, X, y, X_test, y_test):
     print("-" * 60)
     return losses
 ```
+
 ### Putting it all together!
 Now that we've implemented the core functionality, let's look at what using the framework looks like. Here is a full example of what training the classic MNIST handwritten digits dataset looks like:
 ```python
@@ -390,5 +405,6 @@ model.summary()
 model.train(X_train, y_train, X_test, y_test)
 ```
 Very reminiscent of all the major frameworks.
+
 ## Conclusion 
 That covers the core of building a deep learning framework. The full source code is currently hosted on [GitHub](https://github.com/PhitoDev/phito-deep). There is also [documentation](https://phito-deep.readthedocs.io/en/latest/index.html) for the project. And you can also find the package on [PyPi](https://pypi.org/project/phitodeep/) for experimenting with your own projects. As stated earlier, I plan to regularly update this project and iterate on it as I deepen my knowledge. Also look forward to more content on example use cases.
