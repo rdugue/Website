@@ -286,7 +286,7 @@ def train_loop(
 
     return losses
 ```
-Currently batch size controls the training mode. 
+Currently batch size controls the training mode. If no siz is specified we train the model on the full batch every epoch. Otherwise we do mini-batch and take a random sampling from the batch every epoch. In both cases the batch is shuffled every epoch to avoid the model learning from the order of the data.
 
 ### Model 
 Finally let's examine some code from our model class `Sequential`!
@@ -311,6 +311,8 @@ class Sequential:
         loss_class=ls.MeanSquaredError(),
     ) -> None:
 ```
+We can initialize our layers, optimizer, hyperparameters, and loss metric through the constructor. There are also methods to set these if we need a dynamic implementation. 
+
 Now let's look at forward and back propagation:
 ```python
 def predict(self, X):
@@ -328,7 +330,9 @@ def backward(self, gradient):
         # Pass gradient through layer and get gradient for previous layer
          current_gradient = layer.backward(current_gradient)
 ```
-And the train method just calls the train function we've already went over:
+The heavy lifting happens in the code we've previously looked at. We loop through our layers calling forward or backward.
+
+And the train method just calls the `train_loop`` function we've already went over:
 ```python
 def train(self, X, y, X_test, y_test):
     losses = train_loop(
@@ -404,7 +408,7 @@ model.summary()
 
 model.train(X_train, y_train, X_test, y_test)
 ```
-Very reminiscent of all the major frameworks.
+Very reminiscent of all the major frameworks. Notice here we use the builder class for simplicity and readability. 
 
 ## Conclusion 
 That covers the core of building a deep learning framework. The full source code is currently hosted on [GitHub](https://github.com/PhitoDev/phito-deep). There is also [documentation](https://phito-deep.readthedocs.io/en/latest/index.html) for the project. And you can also find the package on [PyPi](https://pypi.org/project/phitodeep/) for experimenting with your own projects. As stated earlier, I plan to regularly update this project and iterate on it as I deepen my knowledge. Also look forward to more content on example use cases.
