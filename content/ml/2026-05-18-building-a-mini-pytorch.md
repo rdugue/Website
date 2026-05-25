@@ -8,26 +8,26 @@ date: 2026-05-18T19:33:00.000-04:00
 thumbnail: /images/uploads/neural-network.png
 ---
 ## Objective
-I recently wrote about a [career pivot](https://phito.dev/blog/2026-03-24-my-journey-so-far) to machine-learning. Whenever I am trying to teach myself a new skill as an engineer, incorporating it into an active project always helps to deepen that understanding. So with machine-learning, a model training framework like [Pytorch](https://pytorch.org/projects/pytorch/) or [Tensorflow](https://www.tensorflow.org/) seemed perfect. These frameworks build on core machine-learning fundamentals, and constantly evolve to encompass modern architectures like [Transformers](https://arxiv.org/html/1706.03762v7) as they are developed. My goal is to use this project to build common foundational architectures as I learn them.
+I recently wrote about a [career pivot](https://phito.dev/blog/2026-03-24-my-journey-so-far) to machine-learning. Whenever I am trying to teach myself a new skill as an engineer, incorporating it into an active project always helps to deepen that understanding. So with machine-learning, a model training framework like [PyTorch](https://pytorch.org/projects/pytorch/) or [TensorFlow](https://www.tensorflow.org/) seemed perfect. These frameworks build on core machine-learning fundamentals, and constantly evolve to encompass modern architectures like [Transformers](https://arxiv.org/html/1706.03762v7) as they are developed. My goal is to use this project to build common foundational architectures as I learn them.
 
-## Scope 
-There are of course some tradeoffs I am making to keep this realistic as one of many projects on my plate. The most prominent being the use of [Numpy](https://numpy.org/) for vectorized math that is the backbone of machine-learning. 
+## Scope
+There are of course some tradeoffs I am making to keep this realistic as one of many projects on my plate. The most prominent being the use of [Numpy](https://numpy.org/) for vectorized math that is the backbone of machine-learning.
 * **Pro:** Numpy uses compiled C code to efficiently execute the vectorized operations. So not only do we save time by not needing to write base linear algebra and calculus algorithms, it's simply faster than what we could ever write in Python.
 * **Con:** The aforementioned frameworks we aim to emulate use GPU acceleration to compute vectorized operations faster. Numpy is CPU bound, and does not afford us that functionality.
 
-Suffice to say, this library's intended use is for educational purposes. For now we are primarily concerned with the quality of the implementation logic. A future project could involve refactoring for GPU support with something like [Rust CUDA](https://rust-gpu.github.io/rust-cuda/) might be exciting!
+Suffice to say, this library's intended use is for educational purposes. For now we are primarily concerned with the quality of the implementation logic. Refactoring for GPU support with something like [Rust CUDA](https://rust-gpu.github.io/rust-cuda/) might be an exciting future project!
 
-## Architecture 
+## Architecture
 I organized the components as modules in an intuitive and hopefully extensible way:
 * **Layers:** These are the core building blocks of the model. A layer can be for flattening data, an activation function, normalization, embedding, encoding, or simply a fully-connected (Dense, Linear) layer. All variations will implement the necessary base class methods for forward and back propagation.
 * **Loss:** This module holds all the different algorithms for calculating loss. It will also have a base class for flexibility.
-* **Optimization:** This module holds everything related to improve model accuracy. This means SGD and Adam implementations, weight initialization algorithms, along with the training loop.
-* **Model:** This is where we put it all together! This takes our layers, our loss metric, and our optimization settings to create our trainable model. 
+* **Optimization:** This module holds everything related to improving model accuracy. This means SGD and Adam implementations, weight initialization algorithms, along with the training loop.
+* **Model:** This is where we put it all together! This takes our layers, our loss metric, and our optimization settings to create our trainable model.
 
 ## Code
-So we've done our planning like good little engineers, so let's take a look at the code! We're going to take a look at snippets from the core modules that should be enough for a basic understanding of how the framework does it's magic. For the full source code, skip to the conclusion.
+So we've done our planning like good little engineers, so let's take a look at the code! We're going to take a look at snippets from the core modules that should be enough for a basic understanding of how the framework does its magic. For the full source code, skip to the conclusion.
 
-### Layers 
+### Layers
 We'll start by taking a look at the base layer class:
 ```python
 import numpy as np
@@ -55,7 +55,7 @@ class Layer:
     def copy(self):
         raise NotImplementedError(f"Block '{self.name}' must implement copy method")
 ```
-It's pretty straight forward. Initializers can be specified for each layer, allowing for weight and bias initialization depending on the kind of regression we're doing(no Initializer snippet, but it's a pretty small module and easy to find in the codebase). Each layer is also responsible for managing a cache and gradients, to enable different optimizers to update weights and biases after backpropagation. Forward stores the input features in the cache before the linear regression and feed forward with the current weights and biases. Backward takes those features from the cache to calculate the gradients with respect to weights and biases.
+It's pretty straightforward. Initializers can be specified for each layer, allowing for weight and bias initialization depending on the kind of regression we're doing (no Initializer snippet, but it's a pretty small module and easy to find in the codebase). Each layer is also responsible for managing a cache and gradients, to enable different optimizers to update weights and biases after backpropagation. Forward stores the input features in the cache before the linear regression and feed forward with the current weights and biases. Backward takes those features from the cache to calculate the gradients with respect to weights and biases.
 
 And here is that implemented in the dense layer implementation:
 ```python
@@ -110,7 +110,7 @@ class Dense(Layer):
         new_layer.cache = {k: v.copy() for k, v in self.cache.items()}
         return new_layer
 ```
-Notice the backward method implementation passes the gradients with respect to inputs up the layer chain at end.
+Notice the backward method implementation passes the gradients with respect to inputs up the layer chain at the end.
 
 Finally let's look at the Softmax implementation:
 ```python
@@ -228,7 +228,7 @@ class Adam(Optimizer):
                     param = getattr(layer, param_name)
                     param -= self.alpha * m_hat / (np.sqrt(v_hat) + self.epsilon)
 ```
-Each Optimizer implements a step method. In the case Adam, we use the gradients stored by each layer to calculate their respective first and second momentum. Those are in turn used to update their weights and biases.
+Each Optimizer implements a step method. In the case of Adam, we use the gradients stored by each layer to calculate their respective first and second momentum. Those are in turn used to update their weights and biases.
 
 And now let's look at the training loop:
 ```python
@@ -286,9 +286,9 @@ def train_loop(
 
     return losses
 ```
-Currently batch size controls the training mode. If no siz is specified we train the model on the full batch every epoch. Otherwise we do mini-batch and take a random sampling from the batch every epoch. In both cases the batch is shuffled every epoch to avoid the model learning from the order of the data.
+Currently batch size controls the training mode. If no size is specified we train the model on the full batch every epoch. Otherwise we do mini-batch and take a random sampling from the batch every epoch. In both cases the batch is shuffled every epoch to avoid the model learning from the order of the data.
 
-### Model 
+### Model
 Finally let's examine some code from our model class `Sequential`!
 First our init block for reference:
 ```python
@@ -311,7 +311,7 @@ class Sequential:
         loss_class=ls.MeanSquaredError(),
     ) -> None:
 ```
-We can initialize our layers, optimizer, hyperparameters, and loss metric through the constructor. There are also methods to set these if we need a dynamic implementation. 
+We can initialize our layers, optimizer, hyperparameters, and loss metric through the constructor. There are also methods to set these if we need a dynamic implementation.
 
 Now let's look at forward and back propagation:
 ```python
@@ -328,11 +328,11 @@ def backward(self, gradient):
     # Iterate through layers in reverse order
     for layer in reversed(self.layers):
         # Pass gradient through layer and get gradient for previous layer
-         current_gradient = layer.backward(current_gradient)
+        current_gradient = layer.backward(current_gradient)
 ```
 The heavy lifting happens in the code we've previously looked at. We loop through our layers calling forward or backward.
 
-And the train method just calls the `train_loop`` function we've already went over:
+And the train method just calls the `train_loop` function we've already gone over:
 ```python
 def train(self, X, y, X_test, y_test):
     losses = train_loop(
@@ -408,7 +408,7 @@ model.summary()
 
 model.train(X_train, y_train, X_test, y_test)
 ```
-Very reminiscent of all the major frameworks. Notice here we use the builder class for simplicity and readability. 
+Very reminiscent of all the major frameworks. Notice here we use the builder class for simplicity and readability.
 
-## Conclusion 
-That covers the core of building a deep learning framework. The full source code is currently hosted on [GitHub](https://github.com/PhitoDev/phito-deep). There is also [documentation](https://phito-deep.readthedocs.io/en/latest/index.html) for the project. And you can also find the package on [PyPi](https://pypi.org/project/phitodeep/) for experimenting with your own projects. As stated earlier, I plan to regularly update this project and iterate on it as I deepen my knowledge. Also look forward to more content on example use cases.
+## Conclusion
+That covers the core of building a deep learning framework. The full source code is currently hosted on [GitHub](https://github.com/PhitoDev/phito-deep). There is also [documentation](https://phito-deep.readthedocs.io/en/latest/index.html) for the project. And you can also find the package on [PyPI](https://pypi.org/project/phitodeep/) for experimenting with your own projects. As stated earlier, I plan to regularly update this project and iterate on it as I deepen my knowledge. Also look forward to more content on example use cases.
